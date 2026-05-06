@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from "motion/react";
-import { ShoppingBag, Menu, X, Instagram, Twitter, ChevronRight, ArrowRight, ArrowLeft, Heart, MessageCircle } from "lucide-react";
+import { ShoppingBag, Menu, X, Instagram, Twitter, ChevronRight, ArrowRight, ArrowLeft, Heart, MessageCircle, Check, DollarSign, Mail, Copy, Share2 } from "lucide-react";
 import { useState, useEffect, ReactNode, useMemo } from "react";
+import { db, handleFirestoreError, OperationType } from "./lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 // Símbolos calcados de las imágenes con alta fidelidad para bordado
 const WingsIcon = () => (
@@ -47,6 +49,7 @@ interface Product {
   icon: ReactNode;
   label: string;
   description: string;
+  color: string;
   images: string[];
 }
 
@@ -58,13 +61,12 @@ const PRODUCTS: Product[] = [
     label: "Archangel", 
     icon: <WingsIcon />, 
     description: "Alas de libertad bordadas en hilo cyan brillante. El modelo más icónico de la colección S.",
+    color: "GRIS OSCURO",
     images: [
-      "https://r2.erweima.ai/ai_image/1740953681467beidit5p.png",
-      "https://r2.erweima.ai/ai_image/1740953696803l791z4b.png",
-      "https://r2.erweima.ai/ai_image/17409538350171v2lsc4.png",
-      "https://r2.erweima.ai/ai_image/1740953874052re79h16.png",
-      "https://r2.erweima.ai/ai_image/174095389643444498cl.png",
-      "https://r2.erweima.ai/ai_image/1740953920959i2st459.png"
+      "https://i.postimg.cc/Mn9Nzntm/file-00000000387471f5b29562c8ecd29c1e.png",
+      "https://i.postimg.cc/w1qnKX5G/file-000000005524720e809bf2cd552918f8.png",
+      "https://i.postimg.cc/68MgB8zL/file-00000000a5f071f5b9f33c4bb1e00adb.png",
+      "https://i.postimg.cc/qNJWfscF/file-00000000e37871f5a017d65f9b9bd58e.png"
     ]
   },
   { 
@@ -74,11 +76,11 @@ const PRODUCTS: Product[] = [
     label: "Crimson", 
     icon: <RoseIcon color="text-red-800" />, 
     description: "Una rosa roja clásica sobre azul marino profundo. Sofisticación urbana con un toque de pasión.",
+    color: "AZUL MARINO",
     images: [
-      "https://r2.erweima.ai/ai_image/174095364801127027p7.png",
-      "https://r2.erweima.ai/ai_image/17409539454157uacbe6.png",
-      "https://r2.erweima.ai/ai_image/1740953974418uxtvaxv.png",
-      "https://r2.erweima.ai/ai_image/1740954003290bax09i9.png"
+      "https://i.postimg.cc/Wdxmmj40/file-00000000126071f590634f9218820513.png",
+      "https://i.postimg.cc/rD7GGcpR/file-000000003b4071f5acad712300fd9b57.png",
+      "https://i.postimg.cc/mPK33RrM/file-000000004bbc71f5a1bfaa362465086b.png"
     ]
   },
   { 
@@ -88,12 +90,11 @@ const PRODUCTS: Product[] = [
     label: "Empire", 
     icon: <CrownIcon />, 
     description: "El poder reflejado en oro. Corona real para aquellos que dominan las calles de cemento.",
+    color: "VERDE",
     images: [
-      "https://r2.erweima.ai/ai_image/1740953047230491p187.png",
-      "https://r2.erweima.ai/ai_image/1740953118949x008i8b.png",
-      "https://r2.erweima.ai/ai_image/174095420377488v50r7.png",
-      "https://r2.erweima.ai/ai_image/174095426117565r5d6s.png",
-      "https://r2.erweima.ai/ai_image/1740954283838oeb9m99.png"
+      "https://i.postimg.cc/Z9yGjTxz/image.jpg",
+      "https://i.postimg.cc/jWJpvs4T/image.jpg",
+      "https://i.postimg.cc/FfJMG9Vm/image.jpg"
     ]
   },
   { 
@@ -103,12 +104,11 @@ const PRODUCTS: Product[] = [
     label: "Checkmate", 
     icon: <ChessKingIcon />, 
     description: "Estrategia y calma. El Rey del tablero llevado a la moda urbana más pura.",
+    color: "BLANCO",
     images: [
-      "https://r2.erweima.ai/ai_image/1740952945037n15y06b.png",
-      "https://r2.erweima.ai/ai_image/17409529949987y6z36p.png",
-      "https://r2.erweima.ai/ai_image/1740954045582v9f2z89.png",
-      "https://r2.erweima.ai/ai_image/174095413346986x352p.png",
-      "https://r2.erweima.ai/ai_image/1740954170366unrxe9b.png"
+      "https://i.postimg.cc/2LjXpmvP/image.jpg",
+      "https://i.postimg.cc/jnqkVKNp/image.jpg",
+      "https://i.postimg.cc/30rbM7mM/image.jpg"
     ]
   },
   { 
@@ -118,12 +118,11 @@ const PRODUCTS: Product[] = [
     label: "Cobalt Rose", 
     icon: <RoseIcon color="text-[#3b4b9b]" />, 
     description: "Flores azules imposibles. Una pieza de coleccionista que desafía la naturaleza urbana.",
+    color: "BEIGE",
     images: [
-      "https://r2.erweima.ai/ai_image/174095325854839q6p9.png",
-      "https://r2.erweima.ai/ai_image/17409535805561z8l348.png",
-      "https://r2.erweima.ai/ai_image/17409545014389p7y0p.png",
-      "https://r2.erweima.ai/ai_image/1740954546876118d048.png",
-      "https://r2.erweima.ai/ai_image/174095457497677u97zb.png"
+      "https://i.postimg.cc/CzP9gZvT/image.jpg",
+      "https://i.postimg.cc/D8jRTWC3/image.jpg",
+      "https://i.postimg.cc/zVt4rLd1/image.jpg"
     ]
   },
   { 
@@ -133,14 +132,11 @@ const PRODUCTS: Product[] = [
     label: "Vesper", 
     icon: <CrossGothicIcon />, 
     description: "Gótico moderno. La cruz Chrome sobre púrpura real, fuerza y misticismo en cada detalle.",
+    color: "PÚRPURA",
     images: [
-      "https://r2.erweima.ai/ai_image/1740953606990i7v29p.png",
-      "https://r2.erweima.ai/ai_image/17409536253457x59za.png",
-      "https://r2.erweima.ai/ai_image/1740955938914v3atc6b.png",
-      "https://r2.erweima.ai/ai_image/17409559868779l0y39p.png",
-      "https://r2.erweima.ai/ai_image/1740956041065p932xp.png",
-      "https://r2.erweima.ai/ai_image/1740954316900i66uaxp.png",
-      "https://r2.erweima.ai/ai_image/1740954449826e7a2578.png"
+      "https://i.postimg.cc/GH5gfWpX/image.jpg",
+      "https://i.postimg.cc/WhHYyB49/image.jpg",
+      "https://i.postimg.cc/0zKX1VMp/file-00000000f34871f5a4f68d433dca446d.png"
     ]
   },
 ];
@@ -150,117 +146,185 @@ const LoadingSpinner = () => (
   <div className="w-8 h-8 border-2 border-black/10 border-t-black/40 rounded-full animate-spin" />
 );
 
-// Utilidad para optimizar URLs de imágenes (CDN global robusto)
-const optimizeImageUrl = (url: string, width = 1000) => {
-  if (!url.includes('erweima.ai')) return url; 
-  // Usamos images.weserv.nl que es extremadamente confiable a nivel mundial
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=${width}&q=80&output=webp&il`;
-};
-
-// Componente de imagen con carga ultra-robusta y fallback inteligente
-function GalleryImage({ src, alt, priority = false, onDidLoad }: { src: string, alt: string, priority?: boolean, onDidLoad?: () => void }) {
+// Utilidad para limpiar URLs de imágenes
+const optimizeImageUrl = (url: string) => {
+  if (!url || !url.startsWith('http')) return url;
+  
+  if (url.includes('unsplash.com')) {
+    const baseUrl = url.split('?')[0];
+    return `${baseUrl}?auto=format&fit=crop&w=1600&q=100`;
+  }
+  
+  return url;
+}; // Componente de imagen con carga ultra-robusta y fallback inteligente
+function GalleryImage({ src, alt, icon, priority = false, onDidLoad, className = "", objectFit = "cover" }: { src: string, alt: string, icon?: ReactNode, priority?: boolean, onDidLoad?: () => void, className?: string, objectFit?: "cover" | "contain" }) {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
-  const [retryKey, setRetryKey] = useState(0);
 
-  // Generamos la URL: primero intentamos optimizada, si falla el usuario puede reintentar
   const finalSrc = useMemo(() => {
-    // Si ya estamos reintentando (retryKey > 0), usamos la URL original directamente para saltar posibles fallos del proxy
-    let baseUrl = retryKey > 0 ? src : optimizeImageUrl(src, priority ? 1200 : 800);
-    // Solo añadimos parámetro de versión si no es un data URI
-    if (src.startsWith('data:')) return src;
-    return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}_v=${retryKey}`;
-  }, [src, priority, retryKey]);
+    if (!src || src.startsWith('data:')) return src;
+    return optimizeImageUrl(src);
+  }, [src]);
 
   useEffect(() => {
     setStatus('loading');
   }, [src]);
 
+  // Timeout de seguridad: Si una imagen queda colgada, marcamos error
+  useEffect(() => {
+    if (status === 'loading') {
+      const timeout = setTimeout(() => {
+        setStatus('error');
+      }, 10000); 
+      return () => clearTimeout(timeout);
+    }
+  }, [status, onDidLoad]);
+
+  const handleRetry = (e: any) => {
+    e.stopPropagation();
+    setStatus('loading');
+  };
+
+  if (status === 'error') {
+    return (
+      <div 
+        onClick={handleRetry}
+        className={`relative bg-zinc-100 rounded-[32px] flex items-center justify-center border border-black/5 cursor-pointer group ${priority ? 'aspect-[4/5]' : 'aspect-square shadow-inner'}`}
+      >
+        <div className="flex flex-col items-center gap-3 opacity-20 group-hover:opacity-40 transition-opacity">
+          <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-black italic group-hover:rotate-12 transition-transform duration-500">!</div>
+          <p className="text-[9px] font-mono uppercase tracking-[0.3em] font-bold text-center px-4 leading-relaxed">
+            Error de carga<br/>
+            <span className="text-[7px] text-red-500">Toca para reintentar</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative bg-zinc-100 rounded-[28px] overflow-hidden group aspect-[4/5] shadow-sm border border-black/5">
+    <div className={`relative bg-zinc-100 rounded-[32px] overflow-hidden group shadow-sm border border-black/5 transition-all duration-500 ${priority ? 'aspect-[4/5]' : 'aspect-square'} ${className}`}>
       {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 z-10">
-          <div className="w-8 h-8 border-2 border-black/10 border-t-black/30 rounded-full animate-spin" />
+        <div className="absolute inset-0 z-10 bg-zinc-100 flex flex-col items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_2s_infinite] skew-x-12" />
+          
+          <div className="relative flex flex-col items-center gap-4">
+            {icon ? (
+              <div className="opacity-10 grayscale scale-50 animate-pulse">
+                {icon}
+              </div>
+            ) : (
+              <div className="relative">
+                <div className={`w-6 h-6 border-2 border-black/5 border-t-black/40 rounded-full animate-spin`} />
+              </div>
+            )}
+            <p className="text-[6px] font-mono font-bold uppercase tracking-[0.6em] opacity-30 animate-pulse text-center">
+              Loading
+            </p>
+          </div>
         </div>
       )}
       
-      {status === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white flex-col gap-4 p-8 text-center z-20">
-          <div className="space-y-2">
-            <div className="text-[11px] font-mono text-black/60 uppercase font-bold tracking-wider">Error de Carga</div>
-            <p className="text-[9px] font-mono text-black/30 leading-tight mx-auto max-w-[140px]">Hubo un problema de conexión con el servidor.</p>
-          </div>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setStatus('loading');
-              setRetryKey(k => k + 1);
-            }}
-            className="px-6 py-2.5 bg-black text-white rounded-full text-[10px] font-mono font-bold uppercase transition-all active:scale-95 shadow-lg"
-          >
-            Reintentar Carga
-          </button>
-        </div>
-      )}
-
-      <img 
-        key={finalSrc}
+      <motion.img 
+        key={`${finalSrc}`}
         src={finalSrc} 
         alt={alt}
-        className={`w-full h-full object-cover transition-all duration-1000 ease-out ${status === 'loaded' ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+        className={`w-full h-full ${objectFit === 'contain' ? 'object-contain' : 'object-cover'} transition-all duration-700 ease-in-out group-hover:scale-110 ${status === 'loaded' ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-105 blur-2xl'}`}
         onLoad={() => {
           setStatus('loaded');
           if (onDidLoad) onDidLoad();
         }}
         onError={() => {
-          console.warn("Error loading image, trying fallback...", finalSrc);
-          if (retryKey === 0) {
-            // Intento automático con URL original si falló el proxy
-            setRetryKey(1);
-          } else {
-            setStatus('error');
-            // Si falla incluso la original, avisamos a la galería para que siga con la siguiente
-            if (onDidLoad) setTimeout(onDidLoad, 1000);
-          }
+          setStatus('error');
+          if (onDidLoad) onDidLoad();
         }}
         loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        referrerPolicy="no-referrer-when-downgrade"
+        referrerPolicy="no-referrer"
       />
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
     </div>
   );
 }
 
-// Componente de galería que carga imágenes de una en una
-function SequentialGallery({ images, label }: { images: string[], label: string }) {
-  const [visibleCount, setVisibleCount] = useState(1);
-  
+// Componente de galería interactivo con carousel y controles
+function InteractiveGallery({ images, label, icon }: { images: string[], label: string, icon: ReactNode }) {
+  const [index, setIndex] = useState(0);
+
   return (
-    <div className="space-y-10 pt-10 border-t border-black/5 text-center w-full">
+    <div className="space-y-8 pt-10 border-t border-black/5 text-center w-full">
       <div className="text-[10px] font-mono font-bold text-black/40 uppercase tracking-[0.3em]">
-        Galería de Referencia
+        Vistas de Referencia
       </div>
-      <div className="grid grid-cols-1 gap-8 pb-20 px-2">
-        {images.map((img, idx) => (
-          idx < visibleCount && (
-            <motion.div 
-              key={img}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
+      
+      <div className="relative group overflow-hidden rounded-[40px] bg-zinc-50 shadow-sm border border-black/5">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="w-full"
+          >
+            <GalleryImage 
+              src={images[index]} 
+              alt={`${label} Ref ${index + 1}`} 
+              icon={icon}
+              priority={true}
+              objectFit="contain"
+            />
+          </motion.div>
+        </AnimatePresence>
+
+        {images.length > 1 && (
+          <>
+            {/* Navegación lateral */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/90 backdrop-blur-xl rounded-full flex items-center justify-center shadow-xl opacity-0 translate-x-[-10px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 active:scale-90 z-20"
             >
-              <GalleryImage 
-                src={img} 
-                alt={`${label} Ref ${idx + 1}`} 
-                priority={idx === 0}
-                onDidLoad={() => {
-                  if (idx + 1 === visibleCount && visibleCount < images.length) {
-                    // Cargamos la siguiente tras un pequeño delay táctico
-                    setTimeout(() => setVisibleCount(idx + 2), 200);
-                  }
-                }}
-              />
-            </motion.div>
-          )
+              <ArrowLeft size={20} className="text-black" />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/90 backdrop-blur-xl rounded-full flex items-center justify-center shadow-xl opacity-0 translate-x-[10px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 active:scale-90 z-20"
+            >
+              <ArrowRight size={20} className="text-black" />
+            </button>
+
+            {/* Indicadores inferiores */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 px-4 py-2 bg-black/10 backdrop-blur-xl rounded-full z-20">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.stopPropagation(); setIndex(idx); }}
+                  className={`h-1.5 rounded-full transition-all duration-500 ease-in-out ${idx === index ? 'w-6 bg-white' : 'w-1.5 bg-white/40'}`}
+                />
+              ))}
+            </div>
+
+            {/* Contador flotante */}
+            <div className="absolute top-6 right-8 px-4 py-1.5 bg-black/40 backdrop-blur-xl rounded-full text-[10px] font-mono font-black text-white uppercase tracking-[0.2em] z-20">
+              {index + 1} / {images.length}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="flex justify-center gap-4 overflow-x-auto pb-4 px-2 no-scrollbar">
+        {images.map((img, idx) => (
+          <button
+            key={`thumb-${idx}`}
+            onClick={() => setIndex(idx)}
+            className={`flex-shrink-0 w-16 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${idx === index ? 'border-cyan-400 scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100'}`}
+          >
+            <GalleryImage 
+              src={img} 
+              alt="thumb" 
+              priority={false}
+              className="rounded-none border-none shadow-none bg-transparent"
+              objectFit="cover"
+            />
+          </button>
         ))}
       </div>
     </div>
@@ -270,32 +334,106 @@ function SequentialGallery({ images, label }: { images: string[], label: string 
 export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [hasCollaborated, setHasCollaborated] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle');
+  const CONTACT_EMAIL = "salvage.gorras@gmail.com";
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
   const urbanBg = "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?q=80&w=2000&auto=format&fit=crop";
 
   // Reset collaboration state when changing product
   useEffect(() => {
     setHasCollaborated(false);
+    setCopied(false);
   }, [selectedProduct?.id]);
 
-  // Precarga inteligente: Precarga solo las primeras imágenes de cada producto al inicio usando la optimización
+  // Precarga ultra-agresiva: Precargamos todo lo posible al inicio
   useEffect(() => {
+    // Precarga de fondos y logos críticos
+    const bgImg = new Image(); bgImg.src = urbanBg;
+
+    // Precarga de la primera imagen de cada producto utilizando el proxy para mayor velocidad
     PRODUCTS.forEach(product => {
-      if (product.images.length > 0) {
-        const img = new Image();
-        img.src = optimizeImageUrl(product.images[0], 800);
-      }
+      product.images.slice(0, 1).forEach((url) => {
+        const p = new Image();
+        p.src = optimizeImageUrl(url);
+      });
     });
   }, []);
 
-  // Precarga prioritaria cuando se selecciona un producto
+  // Precarga prioritaria total cuando se selecciona un producto
   useEffect(() => {
     if (selectedProduct) {
-      selectedProduct.images.forEach(imageUrl => {
+      selectedProduct.images.forEach((imageUrl) => {
         const img = new Image();
-        img.src = optimizeImageUrl(imageUrl, 1000);
+        img.src = optimizeImageUrl(imageUrl);
       });
     }
   }, [selectedProduct]);
+
+  const handleCollaborate = async () => {
+    if (!selectedProduct) return;
+    setHasCollaborated(true);
+    
+    // Log collaboration interest to Firebase
+    try {
+      const collPath = 'collaborations';
+      await addDoc(collection(db, collPath), {
+        productId: selectedProduct.id,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      // Shhh, silent fail but log for dev
+      console.error("Firebase log failed:", error);
+    }
+  };
+
+  const copyAlias = () => {
+    navigator.clipboard.writeText("salvador.bariani");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyEmail = (e: any) => {
+    e.stopPropagation();
+    if (!isValidEmail(CONTACT_EMAIL)) return;
+    navigator.clipboard.writeText(CONTACT_EMAIL);
+    setCopiedEmail(true);
+    setTimeout(() => setCopiedEmail(false), 2000);
+  };
+
+  const handleEmailClick = (e: any) => {
+    if (!isValidEmail(CONTACT_EMAIL)) {
+      e.preventDefault();
+      alert("Error: El formato del correo no es válido.");
+    }
+  };
+
+  const handleShare = async (product: Product) => {
+    const shareData = {
+      title: `Salvage - ${product.label}`,
+      text: `Mira esta gorra de la colección Salvage: ${product.label} (${product.color})`,
+      url: window.location.href
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        setShareStatus('shared');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      } catch (err) {
+        console.error("Error sharing:", err);
+      }
+    } else {
+      // Fallback: Copy link
+      navigator.clipboard.writeText(window.location.href);
+      setShareStatus('copied');
+      setTimeout(() => setShareStatus('idle'), 2000);
+    }
+  };
 
   return (
     <div className="min-h-screen urban-gradient relative overflow-x-hidden">
@@ -390,10 +528,10 @@ export default function App() {
                 layoutId={`card-${p.id}`}
                 onClick={() => setSelectedProduct(p)}
                 onMouseEnter={() => {
-                  // Preload all images for this specific product on hover
+                  // Preload images for this specific product on hover using the optimizer
                   p.images.forEach(imageUrl => {
                     const img = new Image();
-                    img.src = imageUrl;
+                    img.src = optimizeImageUrl(imageUrl);
                   });
                 }}
                 whileHover={{ y: -8, transition: { duration: 0.3 } }}
@@ -469,18 +607,43 @@ export default function App() {
                       <div className="flex items-center gap-12 border-y border-black/5 py-8 justify-center w-full">
                         <div>
                           <div className="text-[10px] font-mono text-black/40 uppercase mb-2">Talla</div>
-                          <div className="font-bold text-xl text-black">UNISEX / OS</div>
+                          <div className="font-bold text-xl text-black">A PEDIDO</div>
                         </div>
                         <div className="w-px h-12 bg-black/5" />
                         <div>
                           <div className="text-[10px] font-mono text-black/40 uppercase mb-2">Color</div>
-                          <div className="font-bold text-xl text-black">ST-01 GRIS</div>
+                          <div className="font-bold text-xl text-black uppercase">{selectedProduct.color}</div>
                         </div>
                       </div>
-                      
+
+                      <div className="text-center px-4 mb-4">
+                        <p className="text-[9px] md:text-[10px] font-mono text-black/30 leading-relaxed uppercase tracking-tight max-w-[280px] mx-auto font-medium">
+                          Nota: Si se recauda lo suficiente haremos una sola gorra. Si se supera el objetivo para 2 o más, se entregará a los colaboradores destacados.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-3 mb-8">
+                        <button 
+                          onClick={() => handleShare(selectedProduct)}
+                          className="flex items-center gap-2 px-4 py-2 bg-black/5 hover:bg-black/10 rounded-full transition-colors text-[10px] font-bold uppercase tracking-widest text-black/60"
+                        >
+                          {shareStatus === 'copied' ? (
+                            <>
+                              <Check size={12} className="text-green-600" />
+                              <span>Link Copiado</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 size={12} />
+                              <span>Compartir</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
                       {!hasCollaborated ? (
                         <button 
-                          onClick={() => setHasCollaborated(true)}
+                          onClick={handleCollaborate}
                           className="w-full py-6 bg-black text-white rounded-[24px] font-bold text-lg hover:bg-zinc-800 transition-all flex items-center justify-center gap-4 group shadow-xl"
                         >
                           <Heart size={20} className="fill-white" />
@@ -489,35 +652,89 @@ export default function App() {
                         </button>
                       ) : (
                         <motion.div 
-                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
-                          className="w-full p-8 bg-zinc-50 rounded-[32px] text-center border border-black/5 shadow-inner"
+                          className="w-full p-6 md:p-10 bg-zinc-50 rounded-[44px] text-center border border-black/5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]"
                         >
-                          <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <Heart size={20} className="text-white fill-white" />
+                          <div className="w-full flex flex-col gap-6 mb-10">
+                            {/* Paso 1: Confirmar (Correo) */}
+                            <div className="bg-black text-white p-5 md:p-8 rounded-[36px] shadow-2xl relative overflow-hidden group text-center uppercase">
+                              <div className="absolute -bottom-6 -right-6 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                <Mail size={100} />
+                              </div>
+                              <div className="flex items-center gap-3 mb-4 justify-center">
+                                <div className="w-7 h-7 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-[10px] font-bold italic text-white">1</div>
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-white/50">Confirmar</span>
+                              </div>
+                              <p className="text-[14px] md:text-[17px] font-black italic leading-tight mb-3 tracking-tight">
+                                Envianos un correo a <br />
+                                <div className="relative inline-block mt-1">
+                                  <a 
+                                    href={`mailto:${CONTACT_EMAIL}`} 
+                                    onClick={handleEmailClick}
+                                    className="text-cyan-400 underline decoration-cyan-400/30 hover:decoration-cyan-400 transition-all font-mono lowercase tracking-tighter text-[12px] md:text-[15px] break-all block"
+                                  >
+                                    {CONTACT_EMAIL}
+                                  </a>
+                                  <button 
+                                    onClick={copyEmail}
+                                    className="absolute -right-8 top-0 p-1 text-white/30 hover:text-white transition-colors"
+                                    title="Copiar correo"
+                                  >
+                                    {copiedEmail ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              </p>
+                              <p className="text-[10px] text-white/50 leading-relaxed font-medium tracking-tight px-1">
+                                Indica tu nombre y la gorra a financiar.
+                              </p>
+                            </div>
+
+                            {/* Paso 2: Colaboración (Alias) */}
+                            <div className="bg-zinc-100 p-5 md:p-8 rounded-[36px] border border-black/5 shadow-sm relative overflow-hidden group text-center uppercase">
+                              <div className="absolute -top-4 -left-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-700">
+                                <DollarSign size={80} />
+                              </div>
+                              <div className="flex items-center gap-3 mb-4 justify-center">
+                                <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-[11px] font-bold italic text-white shadow-lg">2</div>
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-black/40">Colaborar</span>
+                              </div>
+                              <p className="text-[10px] text-black/30 mb-3 font-mono uppercase tracking-[0.2em] font-bold">Alias Mercado Pago</p>
+                              
+                              <div 
+                                onClick={copyAlias}
+                                className={`px-2 py-5 rounded-[24px] border-2 transition-all duration-500 cursor-pointer relative group active:scale-95 shadow-lg ${copied ? "bg-green-500 border-green-500" : "bg-white border-black/5 hover:border-black/20"}`}
+                              >
+                                <span className={`text-lg md:text-2xl font-black font-mono tracking-tighter block transition-colors ${copied ? "text-white" : "text-black"}`}>
+                                  {copied ? "COPIADO" : "salvador.bariani"}
+                                </span>
+                                <AnimatePresence>
+                                  {copied && (
+                                    <motion.div initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0 }} className="absolute -top-3 -right-3 bg-black text-white p-2 rounded-full shadow-2xl z-20 border-4 border-zinc-100">
+                                      <Check size={14} />
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                              <p className="text-[9px] font-bold font-mono text-black/30 uppercase mt-4 tracking-widest leading-none text-center block w-full">{copied ? "¡Listo para transferir!" : "Toca el alias para copiarlo"}</p>
+                            </div>
                           </div>
-                          <h3 className="text-xl font-black uppercase italic mb-2 tracking-tighter">¡Muchas Gracias!</h3>
-                          <p className="text-[10px] text-black/40 mb-6 font-mono uppercase tracking-widest leading-tight">
-                            Tu apoyo nos ayuda a crecer.<br />Podés colaborar usando mi alias:
-                          </p>
-                          <div className="bg-white px-6 py-4 rounded-2xl border-2 border-black/5 mb-2 group active:scale-95 transition-all cursor-pointer">
-                            <span className="text-lg font-black font-mono tracking-tighter block">salvador.bariani</span>
+
+                          <div className="flex flex-col items-center pt-8 border-t border-black/5 gap-3 opacity-60">
+                             <div className="px-5 py-1.5 bg-black/5 rounded-full">
+                               <h3 className="text-[9px] font-black uppercase italic tracking-[0.2em] text-black/60">Tu apoyo nos ayuda a crecer</h3>
+                             </div>
+                             <p className="text-[8px] font-mono uppercase tracking-[0.4em] font-bold">Salvagve Private Collection © 2026</p>
                           </div>
-                          <p className="text-[9px] font-mono text-black/30 uppercase">Toca para copiar o transferir</p>
                         </motion.div>
                       )}
-
-                      <div className="mt-8 text-center">
-                        <p className="text-[11px] font-mono text-black/40 leading-relaxed uppercase tracking-tight max-w-xs mx-auto">
-                          Si se recauda la plata haremos una sola gorra. En el caso de que recaudemos para hacer 2 o más, intentaremos entregársela a alguno de los inversores o recaudadores.
-                        </p>
-                      </div>
                     </div>
 
                     {/* Sequential Reference Gallery */}
-                    <SequentialGallery 
+                    <InteractiveGallery 
                       images={selectedProduct.images} 
                       label={selectedProduct.label} 
+                      icon={selectedProduct.icon}
                     />
                   </div>
                 </div>
@@ -532,11 +749,11 @@ export default function App() {
         <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[40px] p-8 md:p-16 border border-white/5 flex flex-col md:flex-row items-center gap-12 text-center md:text-left overflow-hidden relative shadow-2xl">
           <div className="absolute top-0 right-0 w-64 h-64 bg-zinc-800/20 blur-[100px] rounded-full -mr-20 -mt-20 opacity-50" />
           
-          {/* Collection Group Photo */}
+          {/* Collection Group Photo - Using the provided asset feel */}
           <div className="relative w-full md:w-1/2 h-64 md:h-80 shrink-0 group">
             <div className="absolute inset-0 bg-white/5 rounded-[40px] animate-pulse" />
             <img 
-              src="https://images.unsplash.com/photo-1556306535-0f09a537f0a3?q=80&w=1200&auto=format&fit=crop" 
+              src="https://i.postimg.cc/tYY2FB5b/file-0000000068ac720e867c9874105fcc01.png" 
               alt="Full Collection"
               className="w-full h-full object-cover rounded-[32px] relative z-10 grayscale hover:grayscale-0 transition-all duration-700 shadow-2xl border border-white/10"
             />
@@ -555,7 +772,8 @@ export default function App() {
               Hablame directamente para sacarte cualquier duda sobre la colección, las recaudaciones o cómo participar.
             </p>
             <a 
-              href="mailto:salvage.gorras@gmail.com" 
+              href={`mailto:${CONTACT_EMAIL}`} 
+              onClick={handleEmailClick}
               className="inline-flex items-center gap-4 px-8 py-4 bg-white text-black rounded-full font-bold uppercase text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 shadow-xl group"
             >
               Consultar Ahora

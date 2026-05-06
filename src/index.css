@@ -9,6 +9,12 @@
   
   --color-brand-sidebar: #333333;
   --color-brand-bg: #0a0a0a;
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @layer base {
